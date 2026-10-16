@@ -18,29 +18,18 @@
     min-height: 100vh;
     margin: 0;
     cursor: pointer;
-    /* Evita selección de texto al tocar rápido */
-    -webkit-user-select: none;
-    user-select: none;
   }
 
-  /* Aviso visual sutil para indicar que se puede tocar la pantalla */
   .tap-hint {
     position: fixed;
     bottom: 20px;
     background: #111827;
     color: #fff;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border-radius: 20px;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    animation: none;
-  }
-
-  @keyframes pulse {
-    0% { opacity: 0.8; }
-    50% { opacity: 0.4; }
-    100% { opacity: 0.8; }
   }
 
   /* Contenedor exacto 4x3 pulgadas */
@@ -166,15 +155,20 @@
     </main>
   </div>
 
-  <div class="tap-hint" id="hint">🖨️ Toca la pantalla para compartir e imprimir</div>
+  <div class="tap-hint" id="hint">🔄 Preparando ticket...</div>
 
+  <!-- Librería JsBarcode local para funcionar offline -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script>
     let archivoImagenListo = null;
 
     window.onload = async function() {
+      // Registrar Service Worker para habilitar el modo offline en iOS
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
+      }
+
       const params = new URLSearchParams(window.location.search);
 
       const nombre     = params.get('Nombre') || '';
@@ -198,6 +192,7 @@
       document.getElementById('Envio').textContent      = 'Envio: $' + envio;
       document.getElementById('Total').textContent      = '$' + total;
 
+      // Generar código de barras vectorial
       JsBarcode("#barcode", idPaquete, {
         format: "CODE128",
         displayValue: false,
@@ -206,33 +201,48 @@
         height: 50
       });
 
-      // Generamos la imagen exacta de la etiqueta en segundo plano
-      const elemento = document.getElementById('etiqueta');
-      const canvas = await html2canvas(elemento, {
-        scale: 3,
-        backgroundColor: '#ffffff',
-        useCORS: true
-      });
-
-      const imgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-      archivoImagenListo = new File([imgBlob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
-
-      // Ocultamos el aviso cuando ya está listo para compartirse
-      document.getElementById('hint').textContent = "🖨️ Toca la pantalla para compartir e imprimir";
+      // Método ultrarrápido offline para convertir el HTML en Imagen PNG sin librerías externas pesadas
+      setTimeout(async () => {
+        try {
+          const htmlContent = document.getElementById('etiqueta').outerHTML;
+          const svgStyles = `<svg xmlns="http://www.w3.org/2000/svg" width="1152" height="864"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial; background: white;">${htmlContent}</div></foreignObject></svg>`;
+          
+          const blob = new Blob([svgStyles], { type: 'image/svg+xml;charset=utf-8' });
+          const URL = window.URL || window.webkitURL || window;
+          const blobURL = URL.createObjectURL(blob);
+          
+          const image = new Image();
+          image.onload = async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1152; // Alta resolución 4x3 in a 300 DPI
+            canvas.height = 864;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#FFFFFF';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0);
+            
+            canvas.toBlob(async (pngBlob) => {
+              archivoImagenListo = new File([pngBlob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
+              document.getElementById('hint').textContent = "🖨️ Toca la pantalla para enviar a Jadens";
+            }, 'image/png');
+          };
+          image.src = blobURL;
+        } catch(e) {
+          console.log("Error generando imagen", e);
+        }
+      }, 300);
     };
 
-    // Al tocar cualquier parte de la pantalla, se abre el menú nativo con la imagen lista
+    // Al tocar la pantalla, comparte el archivo a Jadens Printer
     document.body.addEventListener('click', async () => {
       if (archivoImagenListo && navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
         try {
-          await navigator.share({
-            files: [archivoImagenListo]
-          });
+          await navigator.share({ files: [archivoImagenListo] });
         } catch (e) {
           console.log('Compartir cancelado');
         }
       } else {
-        alert("Tu dispositivo no soporta compartir archivos directamente. Usa Safari.");
+        alert("Generando etiqueta, espera un segundo y vuelve a tocar.");
       }
     });
   </script>
