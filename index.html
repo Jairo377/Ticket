@@ -8,8 +8,8 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #ffffff;
-    color: #000;
+    background: #111827;
+    color: #fff;
     font-family: Arial, Helvetica, sans-serif;
     display: flex;
     flex-direction: column;
@@ -22,14 +22,21 @@
 
   .tap-hint {
     position: fixed;
-    bottom: 20px;
-    background: #111827;
+    bottom: 24px;
+    background: #2563eb;
     color: #fff;
-    padding: 12px 24px;
-    border-radius: 20px;
-    font-size: 15px;
+    padding: 14px 28px;
+    border-radius: 30px;
+    font-size: 16px;
     font-weight: bold;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 0.4; }
+    100% { opacity: 0.8; }
   }
 
   /* Contenedor exacto 4x3 pulgadas */
@@ -40,6 +47,7 @@
     background: #fff;
     color: #000;
     overflow: hidden;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
   }
 
   .ticket {
@@ -155,20 +163,19 @@
     </main>
   </div>
 
-  <div class="tap-hint" id="hint">🔄 Cargando ticket...</div>
+  <div class="tap-hint" id="hint">🔄 Generando etiqueta...</div>
 
-  <!-- Librería profesional JsBarcode -->
+  <!-- Librerías de soporte -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script>
     let archivoImagenListo = null;
 
     window.onload = async function() {
-      // Registrar Service Worker de forma segura
+      // Registrar Service Worker para habilitar el almacenamiento offline en iOS
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
-          reg.update();
-        }).catch(err => console.log('SW error', err));
+        navigator.serviceWorker.register('./sw.js').then(reg => reg.update()).catch(err => console.log('SW error', err));
       }
 
       const params = new URLSearchParams(window.location.search);
@@ -194,7 +201,7 @@
       document.getElementById('Envio').textContent      = 'Envio: $' + envio;
       document.getElementById('Total').textContent      = '$' + total;
 
-      // Dibujar código de barras profesional
+      // 1. Dibujar código de barras
       try {
         JsBarcode("#barcode", idPaquete, {
           format: "CODE128",
@@ -204,53 +211,41 @@
           height: 50
         });
       } catch(e) {
-        console.log("Error generando código de barras", e);
+        console.log("Error en código de barras", e);
       }
 
-      // Generar imagen PNG optimizada para Jadens Printer
-      setTimeout(async () => {
-        try {
-          const htmlContent = document.getElementById('etiqueta').outerHTML;
-          const svgStyles = `<svg xmlns="http://www.w3.org/2000/svg" width="1152" height="864"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial; background: white;">${htmlContent}</div></foreignObject></svg>`;
-          
-          const blob = new Blob([svgStyles], { type: 'image/svg+xml;charset=utf-8' });
-          const URL = window.URL || window.webkitURL || window;
-          const blobURL = URL.createObjectURL(blob);
-          
-          const image = new Image();
-          image.onload = async () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1152; 
-            canvas.height = 864;
-            const context = canvas.getContext('2d');
-            context.fillStyle = '#FFFFFF';
-            context.fillRect(0, 0, canvas.width, canvas.height);
-            context.drawImage(image, 0, 0);
-            
-            canvas.toBlob(async (pngBlob) => {
-              archivoImagenListo = new File([pngBlob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
-              document.getElementById('hint').textContent = "🖨️ Toca la pantalla para enviar a Jadens";
-            }, 'image/png');
-          };
-          image.src = blobURL;
-        } catch(e) {
-          console.log("Error en renderizado", e);
-          document.getElementById('hint').textContent = "⚠️ Toca la pantalla para reintentar";
-        }
-      }, 400);
+      // 2. Generar la imagen PNG lista para compartir
+      try {
+        const elemento = document.getElementById('etiqueta');
+        const canvas = await html2canvas(elemento, {
+          scale: 3,
+          backgroundColor: '#ffffff',
+          useCORS: true
+        });
+
+        canvas.toBlob(async (blob) => {
+          archivoImagenListo = new File([blob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
+          document.getElementById('hint').textContent = "🖨️ Toca la pantalla para enviar a Jadens";
+        }, 'image/png', 1.0);
+
+      } catch(err) {
+        console.log("Error generando canvas", err);
+        document.getElementById('hint').textContent = "⚠️ Toca aquí para reintentar";
+      }
     };
 
-    // Al tocar la pantalla, comparte el archivo listo
+    // Al tocar la pantalla, comparte el archivo PNG directo a Jadens Printer
     document.body.addEventListener('click', async () => {
       if (archivoImagenListo && navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
         try {
-          await navigator.share({ files: [archivoImagenListo] });
+          await navigator.share({
+            files: [archivoImagenListo]
+          });
         } catch (e) {
           console.log('Compartir cancelado');
         }
       } else {
-        // Si el usuario toca antes de que termine de procesar el timeout, fuerza una recarga rápida del archivo
-        alert("Generando etiqueta de alta calidad, espera 1 segundo y vuelve a tocar.");
+        alert("Generando archivo PNG, espera un segundo y vuelve a tocar.");
       }
     });
   </script>
