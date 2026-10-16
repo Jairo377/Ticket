@@ -1,9 +1,7 @@
-const CACHE_NAME = 'ticket-cache-v4';
+const CACHE_NAME = 'ticket-cache-v5';
 const urlsToCache = [
   './',
-  './index.html',
-  'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+  './index.html'
 ];
 
 self.addEventListener('install', event => {
@@ -15,14 +13,33 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(clients.claim());
+  event.waitUntil(
+    clients.claim().then(() => {
+      // Limpia cachés antiguos obsoletos para evitar conflictos
+      return caches.keys().then(keys => {
+        return Promise.all(
+          keys.map(key => {
+            if (key !== CACHE_NAME) {
+              return caches.delete(key);
+            }
+          })
+        );
+      });
+    })
+  );
 });
 
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        return response || fetch(event.request);
+        // Si está en caché lo devuelve, si no, lo busca en la red de forma segura
+        return response || fetch(event.request).catch(() => {
+          // Fallback por si acaso no hay conexión y se pide una página nueva
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+        });
       })
   );
 });
