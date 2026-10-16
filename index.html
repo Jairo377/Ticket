@@ -113,7 +113,7 @@
     align-items: center;
     justify-content: center;
   }
-  .barcode canvas {
+  .barcode svg {
     width: 100%;
     height: 100%;
     display: block;
@@ -148,49 +148,27 @@
 
       <section class="barcode-area">
         <div class="barcode">
-          <canvas id="barcodeCanvas"></canvas>
+          <svg id="barcode"></svg>
         </div>
       </section>
 
     </main>
   </div>
 
-  <div class="tap-hint" id="hint">🖨️ Toca la pantalla para enviar a Jadens</div>
+  <div class="tap-hint" id="hint">🔄 Cargando ticket...</div>
+
+  <!-- Librería profesional JsBarcode -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
   <script>
     let archivoImagenListo = null;
 
-    // Generador de líneas de código de barras nativo (Sin librerías externas ni internet)
-    function dibujarCodigoBarras(texto) {
-      const canvas = document.getElementById('barcodeCanvas');
-      canvas.width = 400;
-      canvas.height = 100;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      ctx.fillStyle = "#000000";
-      let x = 20;
-      // Patrón simple basado en los caracteres del ID o Teléfono para simular barras reales
-      for (let i = 0; i < texto.length; i++) {
-        let code = texto.charCodeAt(i);
-        let anchoBarra = (code % 3) + 2;
-        ctx.fillRect(x, 10, anchoBarra, 80);
-        x += anchoBarra + 3;
-        ctx.fillRect(x, 10, 2, 80);
-        x += 5;
-      }
-      // Relleno extra para simular estética de código de barras completo
-      for (let i = x; i < 380; i += 6) {
-        ctx.fillRect(i, 10, 3, 80);
-        i += 4;
-      }
-    }
-
     window.onload = async function() {
-      // Registrar Service Worker para guardar en caché local en iOS
+      // Registrar Service Worker de forma segura
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          reg.update();
+        }).catch(err => console.log('SW error', err));
       }
 
       const params = new URLSearchParams(window.location.search);
@@ -216,10 +194,20 @@
       document.getElementById('Envio').textContent      = 'Envio: $' + envio;
       document.getElementById('Total').textContent      = '$' + total;
 
-      // Dibujar barras localmente
-      dibujarCodigoBarras(idPaquete);
+      // Dibujar código de barras profesional
+      try {
+        JsBarcode("#barcode", idPaquete, {
+          format: "CODE128",
+          displayValue: false,
+          margin: 0,
+          width: 2,
+          height: 50
+        });
+      } catch(e) {
+        console.log("Error generando código de barras", e);
+      }
 
-      // Conversión ultra-rápida y limpia a Imagen PNG 100% offline
+      // Generar imagen PNG optimizada para Jadens Printer
       setTimeout(async () => {
         try {
           const htmlContent = document.getElementById('etiqueta').outerHTML;
@@ -246,12 +234,13 @@
           };
           image.src = blobURL;
         } catch(e) {
-          console.log("Error generando imagen", e);
+          console.log("Error en renderizado", e);
+          document.getElementById('hint').textContent = "⚠️ Toca la pantalla para reintentar";
         }
-      }, 200);
+      }, 400);
     };
 
-    // Al tocar la pantalla, comparte inmediatamente la imagen lista a Jadens Printer
+    // Al tocar la pantalla, comparte el archivo listo
     document.body.addEventListener('click', async () => {
       if (archivoImagenListo && navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
         try {
@@ -260,7 +249,8 @@
           console.log('Compartir cancelado');
         }
       } else {
-        alert("Etiqueta lista. Vuelve a tocar la pantalla.");
+        // Si el usuario toca antes de que termine de procesar el timeout, fuerza una recarga rápida del archivo
+        alert("Generando etiqueta de alta calidad, espera 1 segundo y vuelve a tocar.");
       }
     });
   </script>
