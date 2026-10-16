@@ -211,7 +211,7 @@
 
         canvas.toBlob(async (blob) => {
           archivoImagenListo = new File([blob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
-          document.getElementById('hint').textContent = "🖨️ Toca la pantalla para compartir e imprimir";
+          document.getElementById('hint').textContent = "🖨️ Toca la pantalla para imprimir";
         }, 'image/png', 1.0);
 
       } catch(err) {
