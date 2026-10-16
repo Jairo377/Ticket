@@ -30,13 +30,6 @@
     font-size: 16px;
     font-weight: bold;
     box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
-    animation: pulse 1.5s infinite;
-  }
-
-  @keyframes pulse {
-    0% { opacity: 0.8; }
-    50% { opacity: 0.4; }
-    100% { opacity: 0.8; }
   }
 
   /* Contenedor exacto 4x3 pulgadas */
@@ -173,7 +166,6 @@
     let archivoImagenListo = null;
 
     window.onload = async function() {
-      // Registrar Service Worker de forma limpia
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
       }
@@ -202,7 +194,6 @@
       document.getElementById('Total').textContent      = '$' + total;
 
       try {
-        // 1. Dibujar código de barras
         JsBarcode("#barcode", idPaquete, {
           format: "CODE128",
           displayValue: false,
@@ -211,7 +202,6 @@
           height: 50
         });
 
-        // 2. Generar la imagen PNG lista para compartir
         const elemento = document.getElementById('etiqueta');
         const canvas = await html2canvas(elemento, {
           scale: 3,
@@ -221,7 +211,7 @@
 
         canvas.toBlob(async (blob) => {
           archivoImagenListo = new File([blob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
-          document.getElementById('hint').textContent = "🖨️ Toca la pantalla para enviar a Jadens";
+          document.getElementById('hint').textContent = "🖨️ Toca la pantalla para compartir e imprimir";
         }, 'image/png', 1.0);
 
       } catch(err) {
@@ -230,7 +220,6 @@
       }
     };
 
-    // Al tocar cualquier parte de la pantalla, comparte el archivo PNG directo a Jadens Printer
     document.body.addEventListener('click', async () => {
       if (archivoImagenListo && navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
         try {
