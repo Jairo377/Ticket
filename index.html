@@ -88,11 +88,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0.05in;
   }
 
   .barcode {
-    width: 2.335in;
-    height: 73%;
+    width: 2.6in;
+    height: 80%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .barcode svg {
     width: 100%;
@@ -112,10 +116,10 @@
       <section class="top">
         <div class="details">
           <div id="Nombre"></div>
-          <div>76584639</div>
-          <div>Marseilla</div>
-          <div>1 viaje Septiembre</div>
-          <div>Ruta: -</div>
+          <div id="Numero"></div>
+          <div id="Direccion"></div>
+          <div id="FechaViaje"></div>
+          <div id="Ruta">Ruta: -</div>
         </div>
 
         <aside class="summary">
@@ -124,7 +128,7 @@
             <div class="total-amount" id="Total">$0.00</div>
           </div>
           <div class="charges">
-            <div id="Articulos">Articulos: $0.00</div>
+            <div id="Totalitems">Articulos: $0.00</div>
             <div id="Envio">Envio: $0.00</div>
           </div>
         </aside>
@@ -132,54 +136,52 @@
 
       <section class="barcode-area">
         <div class="barcode">
-          <svg viewBox="0 0 79 1" preserveAspectRatio="none" shape-rendering="crispEdges"
-               xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Código 76584639">
-            <g fill="#000">
-            <rect x="0" width="2" height="1"/>
-            <rect x="3" width="1" height="1"/>
-            <rect x="6" width="3" height="1"/>
-            <rect x="11" width="2" height="1"/>
-            <rect x="15" width="1" height="1"/>
-            <rect x="17" width="1" height="1"/>
-            <rect x="22" width="3" height="1"/>
-            <rect x="26" width="2" height="1"/>
-            <rect x="31" width="1" height="1"/>
-            <rect x="33" width="1" height="1"/>
-            <rect x="35" width="3" height="1"/>
-            <rect x="41" width="2" height="1"/>
-            <rect x="44" width="2" height="1"/>
-            <rect x="47" width="1" height="1"/>
-            <rect x="51" width="1" height="1"/>
-            <rect x="55" width="2" height="1"/>
-            <rect x="59" width="1" height="1"/>
-            <rect x="61" width="1" height="1"/>
-            <rect x="66" width="2" height="1"/>
-            <rect x="71" width="3" height="1"/>
-            <rect x="75" width="1" height="1"/>
-            <rect x="77" width="2" height="1"/>
-            </g>
-          </svg>
+          <svg id="barcode"></svg>
         </div>
       </section>
 
     </main>
   </div>
 
+  <!-- Librería JsBarcode para generar el código vectorial al instante -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script>
-    // Esto reemplaza por completo a Código.gs:
     window.onload = function() {
       const params = new URLSearchParams(window.location.search);
 
-      const nombre = params.get('Nombre') || '';
-      const articulos = params.get('Articulos') || '0.00';
-      const envio = params.get('Envio') || '0.00';
-      const total = params.get('Total') || '0.00';
+      // Captura de parámetros con valores por defecto
+      const nombre     = params.get('Nombre') || '';
+      const numero     = params.get('Numero') || '';
+      const direccion  = params.get('Direccion') || '';
+      const fechaViaje = params.get('FechaViaje') || '';
+      const ruta       = params.get('Ruta') && params.get('Ruta').trim() !== '' ? params.get('Ruta') : '-';
 
-      document.getElementById('Nombre').textContent = nombre;
-      document.getElementById('Articulos').textContent = 'Articulos: $' + articulos;
-      document.getElementById('Envio').textContent = 'Envio: $' + envio;
-      document.getElementById('Total').textContent = '$' + total;
+      const totalItems = params.get('Totalitems') || '0.00';
+      const envio      = params.get('Envio') || '0.00';
+      const total      = params.get('Total') || '0.00';
+      const idPaquete  = params.get('IDPaquete') || numero || '00000000';
 
+      // Asignación a los elementos del ticket
+      document.getElementById('Nombre').textContent     = nombre;
+      document.getElementById('Numero').textContent     = numero;
+      document.getElementById('Direccion').textContent  = direccion;
+      document.getElementById('FechaViaje').textContent = fechaViaje;
+      document.getElementById('Ruta').textContent       = 'Ruta: ' + ruta;
+
+      document.getElementById('Totalitems').textContent = 'Articulos: $' + totalItems;
+      document.getElementById('Envio').textContent      = 'Envio: $' + envio;
+      document.getElementById('Total').textContent      = '$' + total;
+
+      // Generar el código de barras con IDPaquete
+      JsBarcode("#barcode", idPaquete, {
+        format: "CODE128",
+        displayValue: false,
+        margin: 0,
+        width: 2,
+        height: 50
+      });
+
+      // Abrir ventana de impresión
       window.print();
     };
   </script>
