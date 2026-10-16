@@ -166,7 +166,7 @@
     </main>
   </div>
 
-  <div class="tap-hint" id="hint">Toca la pantalla</div>
+  <div class="tap-hint" id="hint">🖨️ Toca la pantalla para compartir e imprimir</div>
 
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -218,7 +218,7 @@
       archivoImagenListo = new File([imgBlob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
 
       // Ocultamos el aviso cuando ya está listo para compartirse
-      document.getElementById('hint').textContent = "🖨️ Toca la pantalla para abrir Jadens Printer";
+      document.getElementById('hint').textContent = "🖨️ Toca la pantalla para compartir e imprimir";
     };
 
     // Al tocar cualquier parte de la pantalla, se abre el menú nativo con la imagen lista
