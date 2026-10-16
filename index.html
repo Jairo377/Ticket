@@ -5,24 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ticket de envío</title>
 <style>
-  /* Impresión térmica: 4 × 3 pulgadas */
-  @page { size: 4in 3in; margin: 0; }
+  /* Regla para navegadores de PC */
+  @page {
+    size: 4in 3in;
+    margin: 0 !important;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body {
-    width: 4in;
-    height: 3in;
-    background: #fff;
-    color: #000;
+  /* En pantalla lo centramos con fondo gris para ver el tamaño real 4x3 */
+  body {
+    background: #e5e7eb;
     font-family: Arial, Helvetica, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 16px;
   }
 
-  /* Margen blanco exterior */
+  /* Contenedor exacto de 4x3 pulgadas (384px x 288px a 96dpi) */
   .page {
     width: 4in;
     height: 3in;
     padding: 0.045in;
+    background: #fff;
+    color: #000;
     overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   }
 
   /* Recuadro principal */
@@ -31,14 +41,14 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    border: 1px solid #000;
+    border: 1.5px solid #000;
   }
 
   /* Parte superior: datos + resumen */
   .top {
     height: 67.7%;
     display: flex;
-    border-bottom: 1px solid #000;
+    border-bottom: 1.5px solid #000;
   }
 
   .details {
@@ -47,9 +57,10 @@
     display: flex;
     flex-direction: column;
     justify-content: space-around;
-    border-right: 1px solid #000;
+    border-right: 1.5px solid #000;
     font-size: 13.5pt;
-    line-height: 1;
+    line-height: 1.1;
+    overflow: hidden;
   }
 
   .summary {
@@ -64,7 +75,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-bottom: 1px solid #000;
+    border-bottom: 1.5px solid #000;
     font-weight: bold;
     line-height: 1;
   }
@@ -104,13 +115,50 @@
     display: block;
   }
 
+  /* Botones de acción en pantalla (no salen en la impresión) */
+  .actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+  }
+  .btn {
+    background: #111827;
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .btn-secondary {
+    background: #4b5563;
+  }
+
+  /* Al imprimir directamente, ocultamos fondo y botones */
   @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body {
+      width: 4in;
+      height: 3in;
+      background: #fff;
+      padding: 0;
+      margin: 0;
+      display: block;
+    }
+    .page {
+      box-shadow: none;
+      margin: 0;
+    }
+    .actions {
+      display: none !important;
+    }
   }
 </style>
 </head>
 <body>
-  <div class="page">
+
+  <!-- Etiqueta exacta de 4x3 pulgadas -->
+  <div class="page" id="etiqueta">
     <main class="ticket">
 
       <section class="top">
@@ -143,13 +191,22 @@
     </main>
   </div>
 
-  <!-- Librería JsBarcode para generar el código vectorial al instante -->
+  <!-- Botones para iPhone / PC -->
+  <div class="actions">
+    <button class="btn" onclick="compartirPDF()">📄 Imprimir / Enviar 4x3 (iPhone)</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨️ Impresión directa (PC)</button>
+  </div>
+
+  <!-- Librerías para Código de Barras y generación de PDF exacto 4x3 in -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
   <script>
+    let idPaqueteGlobal = 'ticket';
+
     window.onload = function() {
       const params = new URLSearchParams(window.location.search);
 
-      // Captura de parámetros con valores por defecto
       const nombre     = params.get('Nombre') || '';
       const numero     = params.get('Numero') || '';
       const direccion  = params.get('Direccion') || '';
@@ -159,9 +216,8 @@
       const totalItems = params.get('Totalitems') || '0.00';
       const envio      = params.get('Envio') || '0.00';
       const total      = params.get('Total') || '0.00';
-      const idPaquete  = params.get('IDPaquete') || numero || '00000000';
+      idPaqueteGlobal  = params.get('IDPaquete') || numero || '00000000';
 
-      // Asignación a los elementos del ticket
       document.getElementById('Nombre').textContent     = nombre;
       document.getElementById('Numero').textContent     = numero;
       document.getElementById('Direccion').textContent  = direccion;
@@ -172,18 +228,42 @@
       document.getElementById('Envio').textContent      = 'Envio: $' + envio;
       document.getElementById('Total').textContent      = '$' + total;
 
-      // Generar el código de barras con IDPaquete
-      JsBarcode("#barcode", idPaquete, {
+      JsBarcode("#barcode", idPaqueteGlobal, {
         format: "CODE128",
         displayValue: false,
         margin: 0,
         width: 2,
         height: 50
       });
-
-      // Abrir ventana de impresión
-      window.print();
     };
+
+    // Genera un PDF con medida física incrustada de 4x3 pulgadas para iOS
+    async function compartirPDF() {
+      const elemento = document.getElementById('etiqueta');
+      const opciones = {
+        margin: 0,
+        filename: `Ticket_${idPaqueteGlobal}.pdf`,
+        image: { type: 'jpeg', quality: 1 },
+        html2canvas: { scale: 3, useCORS: true },
+        jsPDF: { unit: 'in', format: [4, 3], orientation: 'landscape' }
+      };
+
+      // Generamos el archivo PDF en memoria
+      const pdfBlob = await html2pdf().set(opciones).from(elemento).output('blob');
+      const file = new File([pdfBlob], `Ticket_${idPaqueteGlobal}.pdf`, { type: 'application/pdf' });
+
+      // En iPhone abre el menú nativo para enviarlo directo a la app de la impresora o AirPrint en 4x3
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Ticket 4x3'
+        });
+      } else {
+        // Si no soporta Share API, abre el PDF directamente en pantalla
+        const blobUrl = URL.createObjectURL(pdfBlob);
+        window.open(blobUrl, '_blank');
+      }
+    }
   </script>
 </body>
 </html>
