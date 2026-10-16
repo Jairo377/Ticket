@@ -173,9 +173,9 @@
     let archivoImagenListo = null;
 
     window.onload = async function() {
-      // Registrar Service Worker para habilitar el almacenamiento offline en iOS
+      // Registrar Service Worker de forma limpia
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').then(reg => reg.update()).catch(err => console.log('SW error', err));
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error', err));
       }
 
       const params = new URLSearchParams(window.location.search);
@@ -201,8 +201,8 @@
       document.getElementById('Envio').textContent      = 'Envio: $' + envio;
       document.getElementById('Total').textContent      = '$' + total;
 
-      // 1. Dibujar código de barras
       try {
+        // 1. Dibujar código de barras
         JsBarcode("#barcode", idPaquete, {
           format: "CODE128",
           displayValue: false,
@@ -210,12 +210,8 @@
           width: 2,
           height: 50
         });
-      } catch(e) {
-        console.log("Error en código de barras", e);
-      }
 
-      // 2. Generar la imagen PNG lista para compartir
-      try {
+        // 2. Generar la imagen PNG lista para compartir
         const elemento = document.getElementById('etiqueta');
         const canvas = await html2canvas(elemento, {
           scale: 3,
@@ -229,12 +225,12 @@
         }, 'image/png', 1.0);
 
       } catch(err) {
-        console.log("Error generando canvas", err);
+        console.log("Error en generación", err);
         document.getElementById('hint').textContent = "⚠️ Toca aquí para reintentar";
       }
     };
 
-    // Al tocar la pantalla, comparte el archivo PNG directo a Jadens Printer
+    // Al tocar cualquier parte de la pantalla, comparte el archivo PNG directo a Jadens Printer
     document.body.addEventListener('click', async () => {
       if (archivoImagenListo && navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
         try {
