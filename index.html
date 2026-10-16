@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ticket de envío</title>
+<style>
+  /* Impresión térmica: 4 × 3 pulgadas */
+  @page { size: 4in 3in; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 4in;
+    height: 3in;
+    background: #fff;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  /* Margen blanco exterior */
+  .page {
+    width: 4in;
+    height: 3in;
+    padding: 0.045in;
+    overflow: hidden;
+  }
+
+  /* Recuadro principal */
+  .ticket {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #000;
+  }
+
+  /* Parte superior: datos + resumen */
+  .top {
+    height: 67.7%;
+    display: flex;
+    border-bottom: 1px solid #000;
+  }
+
+  .details {
+    width: 66.4%;
+    padding: 0 0.08in;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    border-right: 1px solid #000;
+    font-size: 13.5pt;
+    line-height: 1;
+  }
+
+  .summary {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .total {
+    height: 60%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid #000;
+    font-weight: bold;
+    line-height: 1;
+  }
+  .total-label  { font-size: 26pt; }
+  .total-amount { font-size: 18pt; margin-top: 0.04in; }
+
+  .charges {
+    flex: 1;
+    padding: 0 0.05in;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    font-size: 9.5pt;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  /* Parte inferior: código de barras */
+  .barcode-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .barcode {
+    width: 2.335in;
+    height: 73%;
+  }
+  .barcode svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <main class="ticket">
+
+      <section class="top">
+        <div class="details">
+          <div id="Nombre"></div>
+          <div>76584639</div>
+          <div>Marseilla</div>
+          <div>1 viaje Septiembre</div>
+          <div>Ruta: -</div>
+        </div>
+
+        <aside class="summary">
+          <div class="total">
+            <div class="total-label">TOTAL</div>
+            <div class="total-amount" id="Total">$0.00</div>
+          </div>
+          <div class="charges">
+            <div id="Articulos">Articulos: $0.00</div>
+            <div id="Envio">Envio: $0.00</div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="barcode-area">
+        <div class="barcode">
+          <svg viewBox="0 0 79 1" preserveAspectRatio="none" shape-rendering="crispEdges"
+               xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Código 76584639">
+            <g fill="#000">
+            <rect x="0" width="2" height="1"/>
+            <rect x="3" width="1" height="1"/>
+            <rect x="6" width="3" height="1"/>
+            <rect x="11" width="2" height="1"/>
+            <rect x="15" width="1" height="1"/>
+            <rect x="17" width="1" height="1"/>
+            <rect x="22" width="3" height="1"/>
+            <rect x="26" width="2" height="1"/>
+            <rect x="31" width="1" height="1"/>
+            <rect x="33" width="1" height="1"/>
+            <rect x="35" width="3" height="1"/>
+            <rect x="41" width="2" height="1"/>
+            <rect x="44" width="2" height="1"/>
+            <rect x="47" width="1" height="1"/>
+            <rect x="51" width="1" height="1"/>
+            <rect x="55" width="2" height="1"/>
+            <rect x="59" width="1" height="1"/>
+            <rect x="61" width="1" height="1"/>
+            <rect x="66" width="2" height="1"/>
+            <rect x="71" width="3" height="1"/>
+            <rect x="75" width="1" height="1"/>
+            <rect x="77" width="2" height="1"/>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Esto reemplaza por completo a Código.gs:
+    window.onload = function() {
+      const params = new URLSearchParams(window.location.search);
+
+      const nombre = params.get('Nombre') || '';
+      const articulos = params.get('Articulos') || '0.00';
+      const envio = params.get('Envio') || '0.00';
+      const total = params.get('Total') || '0.00';
+
+      document.getElementById('Nombre').textContent = nombre;
+      document.getElementById('Articulos').textContent = 'Articulos: $' + articulos;
+      document.getElementById('Envio').textContent = 'Envio: $' + envio;
+      document.getElementById('Total').textContent = '$' + total;
+
+      window.print();
+    };
+  </script>
+</body>
+</html>
