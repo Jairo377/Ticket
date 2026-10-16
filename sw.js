@@ -1,14 +1,20 @@
-const CACHE_NAME = 'ticket-cache-v2';
+const CACHE_NAME = 'ticket-cache-v3';
 const urlsToCache = [
   './',
-  './index.html'
+  './index.html',
+  'https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js'
 ];
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
   );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', event => {
