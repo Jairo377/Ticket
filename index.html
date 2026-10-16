@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ticket de envío</title>
 <style>
-  @page {
-    size: 4in 3in landscape;
-    margin: 0 !important;
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -16,12 +12,38 @@
     color: #000;
     font-family: Arial, Helvetica, sans-serif;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
+    cursor: pointer;
+    /* Evita selección de texto al tocar rápido */
+    -webkit-user-select: none;
+    user-select: none;
   }
 
+  /* Aviso visual sutil para indicar que se puede tocar la pantalla */
+  .tap-hint {
+    position: fixed;
+    bottom: 20px;
+    background: #111827;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { opacity: 0.8; }
+    50% { opacity: 0.4; }
+    100% { opacity: 0.8; }
+  }
+
+  /* Contenedor exacto 4x3 pulgadas */
   .page {
     width: 4in;
     height: 3in;
@@ -107,14 +129,6 @@
     height: 100%;
     display: block;
   }
-
-  @media print {
-    body {
-      background: #fff;
-      padding: 0;
-      margin: 0;
-    }
-  }
 </style>
 </head>
 <body>
@@ -152,10 +166,15 @@
     </main>
   </div>
 
+  <div class="tap-hint" id="hint">👆 Toca cualquier parte para enviar a Jadens Printer</div>
+
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script>
-    window.onload = function() {
+    let archivoImagenListo = null;
+
+    window.onload = async function() {
       const params = new URLSearchParams(window.location.search);
 
       const nombre     = params.get('Nombre') || '';
@@ -187,11 +206,35 @@
         height: 50
       });
 
-      // Lanza la impresión de forma automática en cuanto cargan los datos y el código de barras
-      setTimeout(() => {
-        window.print();
-      }, 300);
+      // Generamos la imagen exacta de la etiqueta en segundo plano
+      const elemento = document.getElementById('etiqueta');
+      const canvas = await html2canvas(elemento, {
+        scale: 3,
+        backgroundColor: '#ffffff',
+        useCORS: true
+      });
+
+      const imgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
+      archivoImagenListo = new File([imgBlob], `Ticket_${idPaquete}.png`, { type: 'image/png' });
+
+      // Ocultamos el aviso cuando ya está listo para compartirse
+      document.getElementById('hint').textContent = "🖨️ Toca la pantalla para abrir Jadens Printer";
     };
+
+    // Al tocar cualquier parte de la pantalla, se abre el menú nativo con la imagen lista
+    document.body.addEventListener('click', async () => {
+      if (archivoImagenListo && navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
+        try {
+          await navigator.share({
+            files: [archivoImagenListo]
+          });
+        } catch (e) {
+          console.log('Compartir cancelado');
+        }
+      } else {
+        alert("Tu dispositivo no soporta compartir archivos directamente. Usa Safari.");
+      }
+    });
   </script>
 </body>
 </html>
