@@ -5,30 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ticket de envío</title>
 <style>
+  @page {
+    size: 4in 3in landscape;
+    margin: 0 !important;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #111827;
-    color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #ffffff;
+    color: #000;
+    font-family: Arial, Helvetica, sans-serif;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    padding: 16px;
+    height: 100vh;
+    margin: 0;
   }
 
-  /* Contenedor exacto 4x3 pulgadas */
   .page {
     width: 4in;
     height: 3in;
     padding: 0.045in;
     background: #fff;
     color: #000;
-    font-family: Arial, Helvetica, sans-serif;
     overflow: hidden;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
   }
 
   .ticket {
@@ -108,44 +108,17 @@
     display: block;
   }
 
-  /* Botones grandes para iPhone / iPad */
-  .actions {
-    margin-top: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
-    max-width: 4in;
-  }
-
-  .btn {
-    background: #2563eb;
-    color: #fff;
-    border: none;
-    padding: 16px;
-    border-radius: 12px;
-    font-size: 17px;
-    font-weight: 700;
-    cursor: pointer;
-    text-align: center;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
-    -webkit-tap-highlight-color: transparent;
-  }
-  .btn:active {
-    transform: scale(0.98);
-  }
-
-  .btn-pdf {
-    background: #374151;
-    font-size: 15px;
-    padding: 14px;
-    box-shadow: none;
+  @media print {
+    body {
+      background: #fff;
+      padding: 0;
+      margin: 0;
+    }
   }
 </style>
 </head>
 <body>
 
-  <!-- Etiqueta exacta de 4x3 pulgadas -->
   <div class="page" id="etiqueta">
     <main class="ticket">
 
@@ -179,25 +152,10 @@
     </main>
   </div>
 
-  <div class="actions">
-    <button class="btn" id="btn-jadens" onclick="enviarAJadensImagen()">
-      🖨️ Enviar directo a Jadens Printer
-    </button>
-    <button class="btn btn-pdf" onclick="enviarComoPDF()">
-      📄 Abrir vía PDF (4×3 Horizontal)
-    </button>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
   <script>
-    let idPaqueteGlobal = 'ticket';
-    let archivoImagenListo = null;
-    let archivoPDFListo = null;
-
-    window.onload = async function() {
+    window.onload = function() {
       const params = new URLSearchParams(window.location.search);
 
       const nombre     = params.get('Nombre') || '';
@@ -209,7 +167,7 @@
       const totalItems = params.get('Totalitems') || '0.00';
       const envio      = params.get('Envio') || '0.00';
       const total      = params.get('Total') || '0.00';
-      idPaqueteGlobal  = params.get('IDPaquete') || numero || '00000000';
+      const idPaquete  = params.get('IDPaquete') || numero || '00000000';
 
       document.getElementById('Nombre').textContent     = nombre;
       document.getElementById('Numero').textContent     = numero;
@@ -221,7 +179,7 @@
       document.getElementById('Envio').textContent      = 'Envio: $' + envio;
       document.getElementById('Total').textContent      = '$' + total;
 
-      JsBarcode("#barcode", idPaqueteGlobal, {
+      JsBarcode("#barcode", idPaquete, {
         format: "CODE128",
         displayValue: false,
         margin: 0,
@@ -229,54 +187,11 @@
         height: 50
       });
 
-      // Pre-generamos la etiqueta en segundo plano apenas carga la página (tarda ~0.2 seg)
-      await preGenerarArchivos();
+      // Lanza la impresión de forma automática en cuanto cargan los datos y el código de barras
+      setTimeout(() => {
+        window.print();
+      }, 300);
     };
-
-    async function preGenerarArchivos() {
-      const elemento = document.getElementById('etiqueta');
-      const canvas = await html2canvas(elemento, {
-        scale: 3, // Alta definición para térmica de 203/300 DPI
-        backgroundColor: '#ffffff',
-        useCORS: true
-      });
-
-      // 1. Preparamos versión PNG (Jadens Printer sí aparece directo al compartir imágenes)
-      const imgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 1.0));
-      archivoImagenListo = new File([imgBlob], `Ticket_${idPaqueteGlobal}.png`, { type: 'image/png' });
-
-      // 2. Preparamos versión PDF 4x3 pulgadas horizontal exacta
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'in',
-        format: [4, 3]
-      });
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      pdf.addImage(imgData, 'JPEG', 0, 0, 4, 3);
-      const pdfBlob = pdf.output('blob');
-      archivoPDFListo = new File([pdfBlob], `Ticket_${idPaqueteGlobal}.pdf`, { type: 'application/pdf' });
-    }
-
-    // OPCIÓN 1: Comparte como Imagen PNG 4x3 -> Jadens Printer sale de una vez en el menú de iOS
-    async function enviarAJadensImagen() {
-      if (!archivoImagenListo) await preGenerarArchivos();
-      if (navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
-        await navigator.share({
-          files: [archivoImagenListo]
-        });
-      }
-    }
-
-    // OPCIÓN 2: Comparte como PDF 4x3 horizontal pregenerado
-    async function enviarComoPDF() {
-      if (!archivoPDFListo) await preGenerarArchivos();
-      if (navigator.canShare && navigator.canShare({ files: [archivoPDFListo] })) {
-        await navigator.share({
-          files: [archivoPDFListo]
-        });
-      }
-    }
   </script>
 </body>
 </html>
