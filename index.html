@@ -17,7 +17,6 @@
     justify-content: center;
     min-height: 100vh;
     margin: 0;
-    cursor: pointer;
   }
 
   .tap-hint {
@@ -29,7 +28,15 @@
     border-radius: 30px;
     font-size: 16px;
     font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.2s ease;
     /* Se eliminó la línea de box-shadow para quitar por completo el brillo */
+  }
+
+  .tap-hint:active {
+    transform: scale(0.95);
+    background: #374151;
   }
 
 
@@ -157,7 +164,7 @@
     </main>
   </div>
 
-  <div class="tap-hint" id="hint">🔄 Generando etiqueta...</div>
+  <button class="tap-hint" id="hint">🔄 Generando etiqueta...</button>
 
   <!-- Librerías de soporte -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
@@ -221,7 +228,7 @@
       }
     };
 
-    document.body.addEventListener('click', async () => {
+    document.getElementById('hint').addEventListener('click', async () => {
       if (archivoImagenListo && navigator.canShare && navigator.canShare({ files: [archivoImagenListo] })) {
         try {
           await navigator.share({
